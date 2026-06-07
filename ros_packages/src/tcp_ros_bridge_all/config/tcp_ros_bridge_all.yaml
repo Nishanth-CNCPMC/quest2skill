@@ -1,0 +1,7 @@
+tcp_ros_bridge_all:
+  ros__parameters:
+    tcp_host: "0.0.0.0"
+    tcp_port: 5005
+    topic_prefix: "quest"
+    frame_id: "quest_tracking"
+    detected_timeout_sec: 0.35

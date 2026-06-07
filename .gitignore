@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# ROS/colcon generated output
+ros_packages/build/
+ros_packages/install/
+ros_packages/log/
+
+# Unity generated/exported artifacts
+QuestTcpOnly.apk
+QuestTcpOnly_BackUpThisFolder_ButDontShipItWithYourGame/
+QuestTcpOnly_BurstDebugInformation_DoNotShip/
+
+# Local/editor files
+.DS_Store
+.vscode/
