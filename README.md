@@ -18,4 +18,4 @@ For the full project summary, see:
 Related source locations on the development machine:
 
 - Unity Quest TCP app: `/home/ubuntu/QuestTcpOnly`
-- Isaac Sim extension: `/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64/extsUser/isaacsim.quest_cube_mqtt`
+- Isaac Sim extension: `/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64/extsUser/isaacsim.quest_2_skill_isaac`

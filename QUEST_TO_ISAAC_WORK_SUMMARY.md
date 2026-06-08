@@ -25,11 +25,11 @@ ROS bridge:
 
 Isaac Sim extension:
 
-`/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64/extsUser/isaacsim.quest_cube_mqtt`
+`/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64/extsUser/isaacsim.quest_2_skill_isaac`
 
 Main Isaac extension module:
 
-`/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64/extsUser/isaacsim.quest_cube_mqtt/isaacsim/quest_cube_mqtt`
+`/home/ubuntu/Downloads/isaac-sim-standalone-5.1.0-linux-x86_64/extsUser/isaacsim.quest_2_skill_isaac/isaacsim/quest_2_skill_isaac`
 
 USD file currently loaded by the extension:
 
@@ -188,13 +188,13 @@ Button and detected topics are `std_msgs/msg/Bool`.
 The Isaac extension is shown in Isaac as:
 
 ```text
-Quest ROS Controller Mapper
+Quest2Skill Isaac
 ```
 
 The Python module path remains:
 
 ```text
-isaacsim.quest_cube_mqtt
+isaacsim.quest_2_skill_isaac
 ```
 
 The extension is now modularized:
@@ -354,7 +354,7 @@ When joystick touch is false:
 Local Python compile checks pass:
 
 ```bash
-python3 -m compileall -q extsUser/isaacsim.quest_cube_mqtt/isaacsim/quest_cube_mqtt
+python3 -m compileall -q extsUser/isaacsim.quest_2_skill_isaac/isaacsim/quest_2_skill_isaac
 ```
 
 Full runtime validation must be done inside Isaac Sim because the local shell Python does not cleanly load Isaac's USD `pxr` bindings.
