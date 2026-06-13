@@ -21,6 +21,7 @@ class QuestTcpToRos:
 
         self.raw_pub = self.node.create_publisher(String, f"{PREFIX}/raw", 10)
         self.status_pub = self.node.create_publisher(String, f"{PREFIX}/right/status", 10)
+        self.ros_topic_enable_pub = self.node.create_publisher(Bool, f"{PREFIX}/ros_topic_enable", 10)
         self.app_active_pub = self.node.create_publisher(Bool, f"{PREFIX}/app_active", 10)
         self.head_detected_pub = self.node.create_publisher(Bool, f"{PREFIX}/head/detected", 10)
         self.left_detected_pub = self.node.create_publisher(Bool, f"{PREFIX}/left/detected", 10)
@@ -39,6 +40,7 @@ class QuestTcpToRos:
         self.right_grip_pub = self.node.create_publisher(Float32, f"{PREFIX}/right/grip", 10)
         self.left_button_pubs = self._button_publishers("left")
         self.right_button_pubs = self._button_publishers("right")
+        self.last_ros_enabled_msg = None
 
     def spin_tcp(self):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -81,25 +83,34 @@ class QuestTcpToRos:
 
         try:
             msg = json.loads(line)
-            app_active = bool(msg.get("app_active", False))
-            head_detected = bool(msg.get("head_detected", self._device_detected(msg.get("head"))))
-            left_detected = bool(msg.get("left_detected", self._device_detected(msg.get("left"))))
-            right_detected = bool(msg.get("right_detected", False))
-            origin_set = bool(msg.get("origin_set", False))
+            ros_topic_enable = bool(msg.get("ros_topic_enable", True))
+            self.ros_topic_enable_pub.publish(Bool(data=ros_topic_enable))
+
+            if ros_topic_enable:
+                self.last_ros_enabled_msg = msg
+                publish_msg = msg
+            else:
+                publish_msg = self.last_ros_enabled_msg or msg
+
+            app_active = bool(publish_msg.get("app_active", False))
+            head_detected = bool(publish_msg.get("head_detected", self._device_detected(publish_msg.get("head"))))
+            left_detected = bool(publish_msg.get("left_detected", self._device_detected(publish_msg.get("left"))))
+            right_detected = bool(publish_msg.get("right_detected", False))
+            origin_set = bool(publish_msg.get("origin_set", False))
 
             self.app_active_pub.publish(Bool(data=app_active))
             self.head_detected_pub.publish(Bool(data=head_detected))
             self.left_detected_pub.publish(Bool(data=left_detected))
             self.right_detected_pub.publish(Bool(data=right_detected))
             self.origin_set_pub.publish(Bool(data=origin_set))
-            self._publish_status(msg, app_active, right_detected)
+            self._publish_status(publish_msg, app_active, right_detected)
 
-            self._publish_device_pose("head", msg.get("head"), self.head_pose_pub)
-            self._publish_device_pose("left", msg.get("left"), self.left_pose_pub)
-            self._publish_device_pose("right", msg.get("right"), self.right_pose_pub)
+            self._publish_device_pose("head", publish_msg.get("head"), self.head_pose_pub)
+            self._publish_device_pose("left", publish_msg.get("left"), self.left_pose_pub)
+            self._publish_device_pose("right", publish_msg.get("right"), self.right_pose_pub)
 
-            self._publish_controls("left", msg.get("left"))
-            self._publish_controls("right", msg.get("right"))
+            self._publish_controls("left", publish_msg.get("left"))
+            self._publish_controls("right", publish_msg.get("right"))
         except Exception as exc:
             self.status_pub.publish(String(data="invalid_pose_payload"))
             print(f"Bad message: {line}")

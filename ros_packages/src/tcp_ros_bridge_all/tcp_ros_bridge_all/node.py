@@ -52,7 +52,9 @@ class TcpRosBridgeAll(Node):
             "left": self.create_publisher(Bool, f"{self.prefix}/left/detected", detected_qos),
             "right": self.create_publisher(Bool, f"{self.prefix}/right/detected", detected_qos),
         }
+        self.ros_topic_enable_pub = self.create_publisher(Bool, f"{self.prefix}/ros_topic_enable", 10)
         self.detected_timer = self.create_timer(0.1, self._publish_detected_state)
+        self.last_ros_enabled_payload: Optional[Dict[str, Any]] = None
 
         self.pose_pubs = {
             "head": self.create_publisher(PoseStamped, f"{self.prefix}/head/pose", 10),
@@ -76,6 +78,11 @@ class TcpRosBridgeAll(Node):
             "left": self._make_button_publishers("left"),
             "right": self._make_button_publishers("right"),
         }
+        self.active_conn: Optional[socket.socket] = None
+        self.haptic_subs = [
+            self.create_subscription(Bool, "/haptic_click_left", lambda msg: self._handle_haptic("left", msg), 10),
+            self.create_subscription(Bool, "/haptic_click_right", lambda msg: self._handle_haptic("right", msg), 10),
+        ]
 
     def spin_tcp(self) -> None:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -95,7 +102,9 @@ class TcpRosBridgeAll(Node):
 
                 self.get_logger().info(f"Quest connected from {addr[0]}:{addr[1]}")
                 with conn:
+                    self.active_conn = conn
                     self._handle_connection(conn)
+                    self.active_conn = None
                 self._set_all_detected(False)
                 self.get_logger().info("Quest connection closed")
 
@@ -139,10 +148,19 @@ class TcpRosBridgeAll(Node):
             self.get_logger().warn(f"Skipping malformed payload: {exc}")
 
     def _publish_payload(self, payload: Dict[str, Any]) -> None:
+        ros_topic_enable = self._to_bool(payload.get("ros_topic_enable", True))
+        self.ros_topic_enable_pub.publish(Bool(data=ros_topic_enable))
+
+        if ros_topic_enable:
+            self.last_ros_enabled_payload = payload
+            publish_payload = payload
+        else:
+            publish_payload = self.last_ros_enabled_payload or payload
+
         detected = {
-            "head": self._detected_value(payload, "head"),
-            "left": self._detected_value(payload, "left"),
-            "right": self._detected_value(payload, "right"),
+            "head": self._detected_value(publish_payload, "head"),
+            "left": self._detected_value(publish_payload, "left"),
+            "right": self._detected_value(publish_payload, "right"),
         }
         now = time.monotonic()
         for device_name in detected:
@@ -151,10 +169,10 @@ class TcpRosBridgeAll(Node):
         self._publish_detected_state()
 
         for device_name in ("head", "left", "right"):
-            self._publish_pose(device_name, payload.get(device_name))
+            self._publish_pose(device_name, publish_payload.get(device_name))
 
         for side in ("left", "right"):
-            self._publish_controls(side, payload.get(side))
+            self._publish_controls(side, publish_payload.get(side))
 
     def _publish_pose(self, device_name: str, device: Any) -> None:
         if not isinstance(device, dict):
@@ -198,6 +216,28 @@ class TcpRosBridgeAll(Node):
 
         for button_name, publisher in self.button_pubs[side].items():
             publisher.publish(Bool(data=self._button_value(side, device, button_name)))
+
+    def _handle_haptic(self, side: str, msg: Bool) -> None:
+        if not self._to_bool(msg.data):
+            return
+
+        command = {
+            "type": "haptic",
+            "side": side,
+            "duration_ms": 35,
+            "amplitude": 0.25,
+        }
+        self._send_tcp_command(command)
+
+    def _send_tcp_command(self, command: Dict[str, Any]) -> None:
+        conn = self.active_conn
+        if conn is None:
+            return
+
+        try:
+            conn.sendall((json.dumps(command, separators=(",", ":")) + "\n").encode("utf-8"))
+        except OSError as exc:
+            self.get_logger().warn(f"Failed to send TCP command to Quest: {exc}")
 
     def _make_button_publishers(self, side: str) -> Dict[str, Any]:
         pubs = {
