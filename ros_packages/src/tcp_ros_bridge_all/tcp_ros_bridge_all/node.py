@@ -225,7 +225,7 @@ class TcpRosBridgeAll(Node):
             "type": "haptic",
             "side": side,
             "duration_ms": 35,
-            "amplitude": 0.25,
+            "amplitude": 0.70,
         }
         self._send_tcp_command(command)
 
